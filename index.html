@@ -204,7 +204,7 @@
           reportProgress: (fileIndex, written, total) => {
             setProgress((written / total) * 100);
           },
-          calculateMD5Hash: (image) => md5Hex(image),
+          
         };
 
         await esploader.writeFlash(flashOptions);
