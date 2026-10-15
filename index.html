@@ -1,97 +1,229 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Instalador de Vehículo Bluetooth ESP32</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; }
-        #log { margin-top: 20px; font-family: monospace; white-space: pre-wrap; text-align: left; background: #f4f4f4; padding: 10px; border-radius: 5px; }
-    </style>
-    <!-- Cargamos esptool-js desde un CDN -->
-    <script type="module">
-        import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js@0.5.6/bundle.js';
-
-        let port = null;
-        let transport = null;
-        let esploader = null;
-
-        const logElement = document.getElementById('log');
-        const connectBtn = document.getElementById('connectBtn');
-        const flashBtn = document.getElementById('flashBtn');
-
-        function log(message) {
-            logElement.innerHTML += message + '\n';
-        }
-
-        // Paso 1: Solicitar acceso al puerto serie
-        connectBtn.addEventListener('click', async () => {
-            try {
-                // Pedimos al usuario que seleccione el puerto del ESP32
-                port = await navigator.serial.requestPort();
-                log('Puerto seleccionado. Conectando...');
-
-                // Creamos el transporte y el cargador
-                transport = new Transport(port, true);
-                esploader = new ESPLoader({
-                    transport: transport,
-                    baudrate: 115200,
-                    terminal: {
-                        clean: () => logElement.innerHTML = '',
-                        writeLine: (data) => log(data),
-                        write: (data) => log(data),
-                    },
-                });
-
-                // Conectamos con el chip
-                const chip = await esploader.main();
-                log(`Chip detectado: ${chip}`);
-                connectBtn.disabled = true;
-                flashBtn.disabled = false;
-            } catch (e) {
-                log('Error al conectar: ' + e);
-            }
-        });
-
-        // Paso 2: Flashear el firmware
-        flashBtn.addEventListener('click', async () => {
-            if (!esploader) return;
-            flashBtn.disabled = true;
-            log('Iniciando flasheo...');
-
-            try {
-                // Aquí debes colocar la ruta a tu archivo .bin
-                // En un caso real, lo cargarías con fetch() o lo incluirías como un archivo.
-                const response = await fetch('tu_vehiculo_bluetooth.bin');
-                const firmwareBuffer = await response.arrayBuffer();
-                const firmwareData = new Uint8Array(firmwareBuffer);
-
-                const flashOptions = {
-                    fileArray: [{ data: firmwareData, address: 0x10000 }], // Dirección de inicio para el sketch
-                    flashSize: 'keep',
-                    flashMode: 'keep',
-                    flashFreq: 'keep',
-                    eraseAll: false,
-                    compress: true,
-                };
-
-                await esploader.writeFlash(flashOptions);
-                log('¡Flasheo completado con éxito! Reiniciando placa...');
-                await esploader.hardReset();
-                log('Placa reiniciada. Tu vehículo Bluetooth está listo.');
-            } catch (e) {
-                log('Error durante el flasheo: ' + e);
-            } finally {
-                flashBtn.disabled = false;
-            }
-        });
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instalador Vehículo Bluetooth ESP32</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #e9eef2;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      margin: 0;
+    }
+    .card {
+      width: 100%;
+      max-width: 620px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.45);
+    }
+    h1 { margin: 0 0 8px; font-size: 1.4rem; text-align: center; }
+    .sub { text-align: center; color: #9fb3c8; font-size: .85rem; margin-bottom: 24px; }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    button {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .2s;
+    }
+    #connectBtn { background: linear-gradient(135deg, #38bdf8, #22d3ee); color: #04212e; }
+    #flashBtn   { background: linear-gradient(135deg, #22c55e, #16a34a); color: #04210e; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    button:not(:disabled):hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(56,189,248,.15);
+      border: 1px solid rgba(56,189,248,.4);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #7dd3fc;
+    }
+    #log {
+      margin-top: 20px;
+      background: #000;
+      color: #0f0;
+      font-family: 'Consolas', monospace;
+      font-size: .8rem;
+      padding: 14px;
+      border-radius: 10px;
+      max-height: 260px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+    .progress-container {
+      margin-top: 16px;
+      background: rgba(0,0,0,.4);
+      border-radius: 8px;
+      overflow: hidden;
+      height: 22px;
+      display: none;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #22d3ee);
+      transition: width .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .75rem;
+      font-weight: 700;
+      color: #04212e;
+    }
+    .nota { font-size: .75rem; color: #7f96ab; text-align: center; margin-top: 16px; line-height: 1.5; }
+  </style>
 </head>
 <body>
-    <h1>Instalador de Vehículo Bluetooth ESP32</h1>
-    <p>Conecta tu placa ESP32 por USB y sigue los pasos.</p>
-    <button id="connectBtn">1. Seleccionar Puerto</button>
-    <button id="flashBtn" disabled>2. Instalar Código</button>
-    <div id="log"></div>
+  <div class="card">
+    <h1>🚗 Instalador Vehículo Bluetooth</h1>
+    <p class="sub">ESP32 · Control por Bluetooth · Un clic</p>
+
+    <div class="step">
+      <div class="num">1</div>
+      <button id="connectBtn">Seleccionar Puerto</button>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <button id="flashBtn" disabled>Instalar Código</button>
+    </div>
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar" id="progressBar">0%</div>
+    </div>
+
+    <div id="log">Listo para comenzar. Conecta tu ESP32 por USB.</div>
+
+    <p class="nota">Usa Chrome o Edge. Requiere HTTPS o localhost.<br>Una vez instalado, busca "ESP32Auto" en tu Bluetooth.</p>
+  </div>
+
+  <!-- esptool-js: el motor de flasheo -->
+  <script type="module">
+    import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js@0.5.6/bundle.js';
+
+    // MD5 simple para la verificación (esptool-js lo usa internamente)
+    async function md5Hex(data) {
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    let port = null;
+    let transport = null;
+    let esploader = null;
+
+    const logEl         = document.getElementById('log');
+    const connectBtn    = document.getElementById('connectBtn');
+    const flashBtn      = document.getElementById('flashBtn');
+    const progressCont  = document.getElementById('progressContainer');
+    const progressBar   = document.getElementById('progressBar');
+
+    function log(msg) {
+      logEl.textContent += '\n' + msg;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setProgress(pct) {
+      progressCont.style.display = 'block';
+      progressBar.style.width = pct + '%';
+      progressBar.textContent = Math.round(pct) + '%';
+    }
+
+    // ---- PASO 1: Seleccionar puerto ----
+    connectBtn.addEventListener('click', async () => {
+      try {
+        port = await navigator.serial.requestPort();
+        log('🔌 Puerto seleccionado. Iniciando conexión...');
+
+        transport = new Transport(port, true);
+        esploader = new ESPLoader({
+          transport: transport,
+          baudrate: 921600,
+          terminal: {
+            clean: () => { logEl.textContent = ''; },
+            writeLine: (data) => log(data),
+            write: (data) => log(data),
+          },
+        });
+
+        log('⏳ Detectando chip...');
+        const chip = await esploader.main();
+        log(`✅ Chip detectado: ${chip}`);
+        log('Listo para instalar. Presiona "Instalar Código".');
+
+        connectBtn.disabled = true;
+        flashBtn.disabled = false;
+      } catch (err) {
+        log('❌ Error al conectar: ' + err.message);
+        connectBtn.disabled = false;
+      }
+    });
+
+    // ---- PASO 2: Flashear ----
+    flashBtn.addEventListener('click', async () => {
+      if (!esploader) return;
+      flashBtn.disabled = true;
+      connectBtn.disabled = true;
+
+      try {
+        log('📥 Descargando firmware...');
+        const response = await fetch('firmware.bin');
+        if (!response.ok) throw new Error('No se encontró firmware.bin');
+        const firmwareBuffer = await response.arrayBuffer();
+        const firmwareData = new Uint8Array(firmwareBuffer);
+        log(`✅ Firmware cargado (${(firmwareData.length / 1024).toFixed(1)} KB)`);
+
+        log('🔥 Iniciando grabado en la ESP32...');
+        setProgress(0);
+
+        const flashOptions = {
+          fileArray: [{ data: firmwareData, address: 0x0 }], // merged.bin → 0x0
+          flashSize: 'keep',
+          flashMode: 'keep',
+          flashFreq: 'keep',
+          eraseAll: true,        // borra todo antes, garantiza instalación limpia
+          compress: true,
+          reportProgress: (fileIndex, written, total) => {
+            setProgress((written / total) * 100);
+          },
+          calculateMD5Hash: (image) => md5Hex(image),
+        };
+
+        await esploader.writeFlash(flashOptions);
+        setProgress(100);
+        log('🎉 ¡Flasheo completado!');
+
+        log('🔄 Reiniciando placa...');
+        await esploader.hardReset();
+        log('✅ Placa reiniciada. Tu vehículo Bluetooth está listo.');
+        log('📱 Busca "ESP32Auto" en el Bluetooth de tu teléfono.');
+
+      } catch (err) {
+        log('❌ Error durante el flasheo: ' + err.message);
+        console.error(err);
+      } finally {
+        flashBtn.disabled = false;
+        connectBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
