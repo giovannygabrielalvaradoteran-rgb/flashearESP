@@ -3,227 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Instalador Vehículo Bluetooth ESP32</title>
+  <title>Flasher - Carro Bluetooth ESP32</title>
+  
+  <!-- Carga de ESP Web Tools (Módulo oficial Web Component) -->
+  <script 
+    type="module" 
+    src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module">
+  </script>
+
   <style>
-    * { box-sizing: border-box; }
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: #e9eef2;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0d1117;
+      color: #c9d1d9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
       margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
     }
+
     .card {
+      background-color: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 480px;
       width: 100%;
-      max-width: 620px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 18px;
-      padding: 28px;
-      box-shadow: 0 20px 50px rgba(0,0,0,.45);
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
-    h1 { margin: 0 0 8px; font-size: 1.4rem; text-align: center; }
-    .sub { text-align: center; color: #9fb3c8; font-size: .85rem; margin-bottom: 24px; }
-    .step {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
+
+    h1 {
+      font-size: 1.5rem;
+      color: #f0f6fc;
+      margin-top: 0;
     }
-    button {
-      flex: 1;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: .2s;
+
+    p {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: #8b949e;
+      margin-bottom: 24px;
     }
-    #connectBtn { background: linear-gradient(135deg, #38bdf8, #22d3ee); color: #04212e; }
-    #flashBtn   { background: linear-gradient(135deg, #22c55e, #16a34a); color: #04210e; }
-    button:disabled { opacity: .4; cursor: not-allowed; }
-    button:not(:disabled):hover { filter: brightness(1.1); transform: translateY(-1px); }
-    .num {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      background: rgba(56,189,248,.15);
-      border: 1px solid rgba(56,189,248,.4);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; color: #7dd3fc;
+
+    ol {
+      text-align: left;
+      font-size: 0.9rem;
+      color: #8b949e;
+      margin-bottom: 24px;
+      padding-left: 20px;
     }
-    #log {
-      margin-top: 20px;
-      background: #000;
-      color: #0f0;
-      font-family: 'Consolas', monospace;
-      font-size: .8rem;
-      padding: 14px;
-      border-radius: 10px;
-      max-height: 260px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      line-height: 1.4;
+
+    ol li {
+      margin-bottom: 8px;
     }
-    .progress-container {
-      margin-top: 16px;
-      background: rgba(0,0,0,.4);
-      border-radius: 8px;
-      overflow: hidden;
-      height: 22px;
-      display: none;
+
+    /* Estilo para el botón cuando el navegador no soporta WebSerial */
+    esp-web-install-button[unsupported] {
+      color: #f85149;
     }
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #38bdf8, #22d3ee);
-      transition: width .15s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: .75rem;
-      font-weight: 700;
-      color: #04212e;
-    }
-    .nota { font-size: .75rem; color: #7f96ab; text-align: center; margin-top: 16px; line-height: 1.5; }
   </style>
 </head>
 <body>
+
   <div class="card">
-    <h1>🚗 Instalador Vehículo Bluetooth</h1>
-    <p class="sub">ESP32 · Control por Bluetooth · Un clic</p>
+    <h1>Instalador de Firmware ESP32</h1>
+    <p>Conecta tu placa ESP32 por cable USB a la computadora para cargar directamente el firmware del Carro Bluetooth.</p>
 
-    <div class="step">
-      <div class="num">1</div>
-      <button id="connectBtn">Seleccionar Puerto</button>
-    </div>
-    <div class="step">
-      <div class="num">2</div>
-      <button id="flashBtn" disabled>Instalar Código</button>
-    </div>
+    <ol>
+      <li>Conecta el ESP32 a la PC por USB.</li>
+      <li>Presiona el botón <strong>INSTALAR</strong>.</li>
+      <li>Selecciona el puerto COM de tu ESP32 en el menú emergente.</li>
+      <li>(Opcional) Mantén presionado el botón <strong>BOOT</strong> en la placa si la descarga no inicia automáticamente.</li>
+    </ol>
 
-    <div class="progress-container" id="progressContainer">
-      <div class="progress-bar" id="progressBar">0%</div>
-    </div>
+    <!-- Componente Web de ESP Web Tools -->
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate" style="padding: 12px 24px; font-size: 16px; background-color: #238636; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+        INSTALAR FIRMWARE
+      </button>
 
-    <div id="log">Listo para comenzar. Conecta tu ESP32 por USB.</div>
-
-    <p class="nota">Usa Chrome o Edge. Requiere HTTPS o localhost.<br>Una vez instalado, busca "ESP32Auto" en tu Bluetooth.</p>
+      <span slot="unsupported">
+        ⚠️ Tu navegador no soporta WebSerial. Utiliza Google Chrome, Microsoft Edge u Opera en PC.
+      </span>
+    </esp-web-install-button>
   </div>
 
-  <!-- esptool-js: el motor de flasheo -->
-  <script type="module">
-    import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js@0.5.6/bundle.js';
-
-    // MD5 simple para la verificación (esptool-js lo usa internamente)
-    async function md5Hex(data) {
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    let port = null;
-    let transport = null;
-    let esploader = null;
-
-    const logEl         = document.getElementById('log');
-    const connectBtn    = document.getElementById('connectBtn');
-    const flashBtn      = document.getElementById('flashBtn');
-    const progressCont  = document.getElementById('progressContainer');
-    const progressBar   = document.getElementById('progressBar');
-
-    function log(msg) {
-      logEl.textContent += '\n' + msg;
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    function setProgress(pct) {
-      progressCont.style.display = 'block';
-      progressBar.style.width = pct + '%';
-      progressBar.textContent = Math.round(pct) + '%';
-    }
-
-    // ---- PASO 1: Seleccionar puerto ----
-    connectBtn.addEventListener('click', async () => {
-      try {
-        port = await navigator.serial.requestPort();
-        log('🔌 Puerto seleccionado. Iniciando conexión...');
-
-        transport = new Transport(port, true);
-        esploader = new ESPLoader({
-          transport: transport,
-          baudrate: 921600,
-          terminal: {
-            clean: () => { logEl.textContent = ''; },
-            writeLine: (data) => log(data),
-            write: (data) => log(data),
-          },
-        });
-
-        log('⏳ Detectando chip...');
-        const chip = await esploader.main();
-        log(`✅ Chip detectado: ${chip}`);
-        log('Listo para instalar. Presiona "Instalar Código".');
-
-        connectBtn.disabled = true;
-        flashBtn.disabled = false;
-      } catch (err) {
-        log('❌ Error al conectar: ' + err.message);
-        connectBtn.disabled = false;
-      }
-    });
-
-    // ---- PASO 2: Flashear ----
-    flashBtn.addEventListener('click', async () => {
-      if (!esploader) return;
-      flashBtn.disabled = true;
-      connectBtn.disabled = true;
-
-      try {
-        log('📥 Descargando firmware...');
-        const response = await fetch('firmware.bin');
-        if (!response.ok) throw new Error('No se encontró firmware.bin');
-        const firmwareBuffer = await response.arrayBuffer();
-        const firmwareData = new Uint8Array(firmwareBuffer);
-        log(`✅ Firmware cargado (${(firmwareData.length / 1024).toFixed(1)} KB)`);
-
-        log('🔥 Iniciando grabado en la ESP32...');
-        setProgress(0);
-
-        const flashOptions = {
-          fileArray: [{ data: firmwareData, address: 0x0 }], // merged.bin → 0x0
-          flashSize: 'keep',
-          flashMode: 'keep',
-          flashFreq: 'keep',
-          eraseAll: true,        // borra todo antes, garantiza instalación limpia
-          compress: true,
-          reportProgress: (fileIndex, written, total) => {
-            setProgress((written / total) * 100);
-          },
-          
-        };
-
-        await esploader.writeFlash(flashOptions);
-        setProgress(100);
-        log('🎉 ¡Flasheo completado!');
-
-        log('🔄 Reiniciando placa...');
-        await esploader.hardReset();
-        log('✅ Placa reiniciada. Tu vehículo Bluetooth está listo.');
-        log('📱 Busca "ESP32Auto" en el Bluetooth de tu teléfono.');
-
-      } catch (err) {
-        log('❌ Error durante el flasheo: ' + err.message);
-        console.error(err);
-      } finally {
-        flashBtn.disabled = false;
-        connectBtn.disabled = false;
-      }
-    });
-  </script>
 </body>
 </html>
