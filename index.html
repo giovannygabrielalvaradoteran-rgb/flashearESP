@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Instalador de Vehículo Bluetooth ESP32</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; }
+        #log { margin-top: 20px; font-family: monospace; white-space: pre-wrap; text-align: left; background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    </style>
+    <!-- Cargamos esptool-js desde un CDN -->
+    <script type="module">
+        import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js@0.5.6/bundle.js';
+
+        let port = null;
+        let transport = null;
+        let esploader = null;
+
+        const logElement = document.getElementById('log');
+        const connectBtn = document.getElementById('connectBtn');
+        const flashBtn = document.getElementById('flashBtn');
+
+        function log(message) {
+            logElement.innerHTML += message + '\n';
+        }
+
+        // Paso 1: Solicitar acceso al puerto serie
+        connectBtn.addEventListener('click', async () => {
+            try {
+                // Pedimos al usuario que seleccione el puerto del ESP32
+                port = await navigator.serial.requestPort();
+                log('Puerto seleccionado. Conectando...');
+
+                // Creamos el transporte y el cargador
+                transport = new Transport(port, true);
+                esploader = new ESPLoader({
+                    transport: transport,
+                    baudrate: 115200,
+                    terminal: {
+                        clean: () => logElement.innerHTML = '',
+                        writeLine: (data) => log(data),
+                        write: (data) => log(data),
+                    },
+                });
+
+                // Conectamos con el chip
+                const chip = await esploader.main();
+                log(`Chip detectado: ${chip}`);
+                connectBtn.disabled = true;
+                flashBtn.disabled = false;
+            } catch (e) {
+                log('Error al conectar: ' + e);
+            }
+        });
+
+        // Paso 2: Flashear el firmware
+        flashBtn.addEventListener('click', async () => {
+            if (!esploader) return;
+            flashBtn.disabled = true;
+            log('Iniciando flasheo...');
+
+            try {
+                // Aquí debes colocar la ruta a tu archivo .bin
+                // En un caso real, lo cargarías con fetch() o lo incluirías como un archivo.
+                const response = await fetch('tu_vehiculo_bluetooth.bin');
+                const firmwareBuffer = await response.arrayBuffer();
+                const firmwareData = new Uint8Array(firmwareBuffer);
+
+                const flashOptions = {
+                    fileArray: [{ data: firmwareData, address: 0x10000 }], // Dirección de inicio para el sketch
+                    flashSize: 'keep',
+                    flashMode: 'keep',
+                    flashFreq: 'keep',
+                    eraseAll: false,
+                    compress: true,
+                };
+
+                await esploader.writeFlash(flashOptions);
+                log('¡Flasheo completado con éxito! Reiniciando placa...');
+                await esploader.hardReset();
+                log('Placa reiniciada. Tu vehículo Bluetooth está listo.');
+            } catch (e) {
+                log('Error durante el flasheo: ' + e);
+            } finally {
+                flashBtn.disabled = false;
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>Instalador de Vehículo Bluetooth ESP32</h1>
+    <p>Conecta tu placa ESP32 por USB y sigue los pasos.</p>
+    <button id="connectBtn">1. Seleccionar Puerto</button>
+    <button id="flashBtn" disabled>2. Instalar Código</button>
+    <div id="log"></div>
+</body>
+</html>
